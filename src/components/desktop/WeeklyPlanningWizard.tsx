@@ -332,7 +332,7 @@ export function WeeklyPlanningWizard() {
   const days = Array.from({ length: 7 }).map((_, i) => addDays(startOfCurrentWeek, i))
 
   const handleDragStart = (e: DragStartEvent) => {
-    setActiveTask(e.active.data.current)
+    setActiveTask((e.active.data.current as Task) ?? null)
   }
 
   const handleDragEnd = (e: DragEndEvent) => {

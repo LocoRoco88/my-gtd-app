@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { User } from '@supabase/supabase-js'
 import { api } from './api'
 
 export type AppView = 'desktop' | 'mobile'
@@ -63,8 +64,8 @@ export type FocusState = 'IDLE' | 'ACTIVE_WORKING' | 'INTERRUPTED'
 
 interface AppState {
   // Auth State
-  user: Record<string, unknown> | null
-  setUser: (user: Record<string, unknown> | null) => void
+  user: User | null
+  setUser: (user: User | null) => void
 
   // Navigation State
   appView: AppView

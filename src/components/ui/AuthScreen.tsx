@@ -98,7 +98,7 @@ export function AuthScreen() {
         <button 
           onClick={() => {
             // Set a mock user in Zustand store to bypass AuthScreen
-            useStore.getState().setUser({ id: 'demo-user', email: 'demo@gtd.os' })
+            useStore.getState().setUser({ id: 'demo-user', email: 'demo@gtd.os' } as any)
           }}
           className="w-full bg-surface-hover-light dark:bg-surface-hover-dark hover:bg-surface-border text-foreground font-bold py-3 px-4 rounded-xl border border-surface-border transition-all flex items-center justify-center gap-2"
         >
