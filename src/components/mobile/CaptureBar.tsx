@@ -25,21 +25,21 @@ export function CaptureBar() {
   }
 
   return (
-    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background/95 to-transparent pb-8">
-      <form onSubmit={handleCapture} className="relative max-w-sm mx-auto shadow-2xl shadow-brand-500/10 rounded-full">
+    <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-background via-background/95 to-transparent pb-5">
+      <form onSubmit={handleCapture} className="relative max-w-sm mx-auto shadow-xl shadow-brand-500/5 rounded-full">
         <input 
           type="text" 
           placeholder="Capture to inbox..."
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-full bg-surface border border-surface-border rounded-full pl-6 pr-14 py-4 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all font-medium text-lg placeholder:text-muted/70"
+          className="w-full bg-surface border border-surface-border rounded-full pl-5 pr-12 py-3 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all font-medium text-base placeholder:text-muted/70"
         />
         <button 
           type="submit"
           disabled={!title.trim()}
-          className="absolute right-2 top-2 bottom-2 w-10 bg-brand-600 hover:bg-brand-500 disabled:bg-surface-border text-white rounded-full flex items-center justify-center transition-all"
+          className="absolute right-1.5 top-1.5 bottom-1.5 w-9 bg-brand-600 hover:bg-brand-500 disabled:bg-surface-border text-white rounded-full flex items-center justify-center transition-all"
         >
-          <Plus size={24} />
+          <Plus size={20} />
         </button>
       </form>
     </div>

@@ -31,7 +31,7 @@ export function MealPlanSlot() {
       {isOpen && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end">
           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" onClick={() => setIsOpen(false)}></div>
-          <div className="relative bg-surface border-t border-surface-border rounded-t-3xl shadow-2xl p-6 pb-12 animate-in slide-in-from-bottom-full duration-300">
+          <div className="relative bg-surface border-t border-surface-border rounded-t-3xl shadow-2xl p-6 pb-12 animate-in slide-in-from-bottom-full duration-300 max-h-[85vh] overflow-y-auto">
             <button 
               onClick={() => setIsOpen(false)}
               className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center bg-surface-hover-light dark:bg-surface-hover-dark rounded-full"

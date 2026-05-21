@@ -20,7 +20,7 @@ export function MobileHub() {
   return (
     <div className="flex flex-col h-full bg-background text-foreground relative">
       {/* Top Header / Context & Meals */}
-      <header className="px-6 py-4 border-b border-surface-border bg-surface/80 backdrop-blur flex items-center justify-between z-10 sticky top-0">
+      <header className="px-4 py-3 border-b border-surface-border bg-surface/80 backdrop-blur flex items-center justify-between z-30 sticky top-0">
         <div className="flex items-center gap-2">
           <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold shadow-md shadow-brand-500/20">
             GTD
@@ -36,7 +36,7 @@ export function MobileHub() {
       {/* Main Content Area: Moleskine or Timeline */}
       <div className="flex-1 overflow-y-auto no-scrollbar pb-24 relative">
         {/* Toggle UI */}
-        <div className="sticky top-0 z-10 bg-background/90 backdrop-blur px-6 py-4 mb-2 flex justify-center">
+        <div className="sticky top-0 z-10 bg-background/90 backdrop-blur px-4 py-3 mb-1 flex justify-center">
           <div className="flex bg-surface-hover-light dark:bg-surface-hover-dark p-1 rounded-full border border-surface-border shadow-inner w-full max-w-sm mx-auto">
             <button
               onClick={() => setMobileTab('moleskine')}
@@ -61,7 +61,7 @@ export function MobileHub() {
           </div>
         </div>
 
-        <div className="px-6">
+        <div className="px-4">
           {mobileTab === 'moleskine' ? <MoleskineView /> : <TimelineView />}
         </div>
       </div>
