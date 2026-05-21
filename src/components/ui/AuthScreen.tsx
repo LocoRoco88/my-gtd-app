@@ -26,6 +26,17 @@ export function AuthScreen() {
     }
   }
 
+  const handleGoogleLogin = async () => {
+    setLoading(true)
+    setError('')
+    try {
+      await api.signInWithGoogle()
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Google sign-in failed')
+      setLoading(false)
+    }
+  }
+
   if (sent) {
     return (
       <div className="min-h-[100dvh] flex items-center justify-center bg-background p-4 font-sans">
@@ -87,6 +98,32 @@ export function AuthScreen() {
             {loading ? <Loader2 size={18} className="animate-spin" /> : 'Send Magic Link'}
           </button>
         </form>
+
+        <button 
+          onClick={handleGoogleLogin}
+          disabled={loading}
+          className="w-full bg-surface hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark text-foreground font-bold py-3 px-4 rounded-xl border border-surface-border transition-all flex items-center justify-center gap-2 mt-3"
+        >
+          <svg className="w-5 h-5" viewBox="0 0 24 24">
+            <path
+              fill="#EA4335"
+              d="M5.266 9.765A7.077 7.077 0 0 1 12 4.909c1.69 0 3.218.6 4.418 1.582L19.91 3C17.782 1.145 15.055 0 12 0 7.27 0 3.23 2.68 1.255 6.618l3.99 3.147z"
+            />
+            <path
+              fill="#FBBC05"
+              d="M16.04 15.345c-1.037.664-2.34 1.055-4.04 1.055a7.08 7.08 0 0 1-6.733-4.855L1.255 14.69A11.96 11.96 0 0 0 12 24c3.273 0 6.09-1.073 8.127-2.918l-4.086-5.737z"
+            />
+            <path
+              fill="#4285F4"
+              d="M23.49 12.273c0-.818-.073-1.609-.209-2.373H12v4.509h6.436a5.51 5.51 0 0 1-2.386 3.618l4.086 5.736c2.39-2.2 3.764-5.436 3.764-9.49z"
+            />
+            <path
+              fill="#34A853"
+              d="M5.266 14.236A7.07 7.07 0 0 1 4.91 12c0-.79.136-1.545.355-2.235L1.255 6.618C.455 8.218 0 10.055 0 12c0 1.945.455 3.782 1.255 5.382l4.01-3.146z"
+            />
+          </svg>
+          Continue with Google
+        </button>
 
         <div className="relative my-6 flex items-center justify-center">
           <div className="absolute inset-0 flex items-center">
