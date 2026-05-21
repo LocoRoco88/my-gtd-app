@@ -4,9 +4,7 @@
 -- 1. ENUMS AND TYPES
 CREATE TYPE project_status AS ENUM ('active', 'completed', 'someday');
 CREATE TYPE task_status AS ENUM ('inbox', 'next_action', 'waiting', 'done', 'scheduled');
-CREATE TYPE task_type AS ENUM ('standard', 'routine');
 CREATE TYPE routine_interval AS ENUM ('daily', 'weekly', 'monthly', 'yearly');
-CREATE TYPE task_context AS ENUM ('@computer', '@home', '@errands');
 CREATE TYPE time_log_type AS ENUM ('active', 'interrupted');
 CREATE TYPE project_reference_type AS ENUM ('text', 'image_url');
 CREATE TYPE routine_time_of_day AS ENUM ('morning', 'afternoon', 'evening');
@@ -38,13 +36,18 @@ CREATE TABLE public.tasks (
     project_id UUID REFERENCES public.projects(id) ON DELETE CASCADE,
     title TEXT NOT NULL,
     status task_status NOT NULL DEFAULT 'inbox',
-    type task_type NOT NULL DEFAULT 'standard',
+    type TEXT NOT NULL DEFAULT 'standard',
     routine_interval routine_interval,
-    context task_context,
+    context TEXT,
     time_estimate_minutes INTEGER,
     scheduled_date DATE,
     is_routine BOOLEAN NOT NULL DEFAULT false,
     routine_time_of_day routine_time_of_day,
+    routine_exact_time TEXT,
+    routine_day_of_week INTEGER,
+    event_date DATE,
+    event_start_time TEXT,
+    event_end_time TEXT,
     completed_at TIMESTAMP WITH TIME ZONE,
     checklist JSONB DEFAULT '[]'::jsonb,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

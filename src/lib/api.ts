@@ -1,5 +1,35 @@
 import { supabase } from './supabase'
-import { Task, Project, TaskStatus, TaskType } from './store'
+import { Task, Project } from './store'
+
+function sanitizeTask(task: Partial<Task>) {
+  const allowedKeys: (keyof Task)[] = [
+    'id',
+    'project_id',
+    'title',
+    'status',
+    'type',
+    'routine_interval',
+    'context',
+    'time_estimate_minutes',
+    'scheduled_date',
+    'is_routine',
+    'routine_time_of_day',
+    'routine_exact_time',
+    'routine_day_of_week',
+    'event_date',
+    'event_start_time',
+    'event_end_time',
+    'completed_at',
+    'checklist'
+  ]
+  const sanitized: any = {}
+  for (const key of allowedKeys) {
+    if (key in task) {
+      sanitized[key] = task[key]
+    }
+  }
+  return sanitized
+}
 
 // Auth API
 export const api = {
@@ -35,32 +65,55 @@ export const api = {
   async getProjects() {
     const { data, error } = await supabase.from('projects').select('*').order('created_at', { ascending: false })
     if (error) throw error
-    return data
+    return (data || []).map((p: any) => ({
+      id: p.id,
+      title: p.title,
+      outcome: p.outcome_description || '',
+      status: p.status
+    })) as Project[]
   },
 
   async createProject(project: Partial<Project>) {
-    const { data, error } = await supabase.from('projects').insert([project]).select().single()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not authenticated')
+    const dbProject = {
+      id: project.id,
+      user_id: user.id,
+      title: project.title,
+      outcome_description: project.outcome,
+      status: project.status
+    }
+    const { data, error } = await supabase.from('projects').insert([dbProject]).select().single()
     if (error) throw error
-    return data
+    return {
+      id: data.id,
+      title: data.title,
+      outcome: data.outcome_description || '',
+      status: data.status
+    } as Project
   },
 
   // Tasks
   async getTasks() {
     const { data, error } = await supabase.from('tasks').select('*').order('created_at', { ascending: true })
     if (error) throw error
-    return data
+    return data as Task[]
   },
 
   async createTask(task: Partial<Task>) {
-    const { data, error } = await supabase.from('tasks').insert([task]).select().single()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) throw new Error('Not authenticated')
+    const sanitized = sanitizeTask(task)
+    const { data, error } = await supabase.from('tasks').insert([{ ...sanitized, user_id: user.id }]).select().single()
     if (error) throw error
-    return data
+    return data as Task
   },
 
   async updateTask(id: string, updates: Partial<Task>) {
-    const { data, error } = await supabase.from('tasks').update(updates).eq('id', id).select().single()
+    const sanitized = sanitizeTask(updates)
+    const { data, error } = await supabase.from('tasks').update(sanitized).eq('id', id).select().single()
     if (error) throw error
-    return data
+    return data as Task
   },
 
   async deleteTask(id: string) {

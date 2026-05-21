@@ -385,13 +385,13 @@ export function WeeklyPlanningWizard() {
     const halfTime = Math.floor(task.time_estimate_minutes / 2)
     const part1 = { 
       ...task, 
-      id: Date.now().toString() + '-1', 
+      id: crypto.randomUUID(), 
       title: `${task.title} (Part 1)`, 
       time_estimate_minutes: halfTime 
     }
     const part2 = { 
       ...task, 
-      id: Date.now().toString() + '-2', 
+      id: crypto.randomUUID(), 
       title: `${task.title} (Part 2)`, 
       time_estimate_minutes: task.time_estimate_minutes - halfTime 
     }

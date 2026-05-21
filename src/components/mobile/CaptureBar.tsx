@@ -13,7 +13,7 @@ export function CaptureBar() {
     if (!title.trim()) return
 
     addTask({
-      id: Date.now().toString(),
+      id: crypto.randomUUID(),
       title: title.trim(),
       status: 'inbox',
       type: 'standard',
