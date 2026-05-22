@@ -2,7 +2,66 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { useStore, Task } from '@/lib/store'
-import { Check, Trash2, Clock, Inbox, ChevronRight, Play, Archive, Link, FastForward, Repeat, FolderKanban, FolderPlus, Calendar, Plus, X } from 'lucide-react'
+import { Check, Trash2, Clock, Inbox, ChevronRight, Play, Archive, Link, FastForward, Repeat, FolderKanban, FolderPlus, Calendar, Plus, X, GripVertical } from 'lucide-react'
+import { DndContext, closestCenter, DragEndEvent, DragOverlay, DragStartEvent } from '@dnd-kit/core'
+import { SortableContext, verticalListSortingStrategy, arrayMove, useSortable } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
+
+interface ChecklistItemType {
+  id: string
+  text: string
+  is_completed: boolean
+}
+
+function SortableChecklistItem({ 
+  item, 
+  onRemove 
+}: { 
+  item: ChecklistItemType
+  onRemove: (id: string) => void 
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging
+  } = useSortable({ id: item.id })
+
+  const style = {
+    transform: transform ? CSS.Transform.toString(transform) : undefined,
+    transition,
+    opacity: isDragging ? 0.3 : 1,
+  }
+
+  return (
+    <div 
+      ref={setNodeRef} 
+      style={style}
+      className={`flex items-center gap-3 group/item bg-background border border-surface-border p-2 rounded-lg shadow-sm ${
+        isDragging ? 'z-50 shadow-md border-brand-500 bg-brand-50 dark:bg-brand-900/20' : ''
+      }`}
+    >
+      <div 
+        {...attributes} 
+        {...listeners} 
+        className="cursor-grab active:cursor-grabbing p-1 text-muted hover:text-foreground shrink-0"
+      >
+        <GripVertical size={14} />
+      </div>
+      <div className="w-4 h-4 rounded border border-surface-border flex items-center justify-center shrink-0 pointer-events-none"></div>
+      <span className="text-sm flex-1 text-foreground select-none">{item.text}</span>
+      <button 
+        onClick={() => onRemove(item.id)}
+        className="p-1 text-muted hover:text-red-500 transition-opacity opacity-0 group-hover/item:opacity-100"
+      >
+        <X size={14} />
+      </button>
+    </div>
+  )
+}
+
 
 export function ClarifyWizard() {
   const { tasks, updateTask, deleteTask, addProject, projects } = useStore()
@@ -30,6 +89,23 @@ export function ClarifyWizard() {
   // Atomic Checklist state
   const [draftChecklist, setDraftChecklist] = useState<{id: string, text: string, is_completed: boolean}[]>([])
   const [draftChecklistItem, setDraftChecklistItem] = useState('')
+  const [activeDragId, setActiveDragId] = useState<string | null>(null)
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveDragId(String(event.active.id))
+  }
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveDragId(null)
+    const { active, over } = event
+    if (over && active.id !== over.id) {
+      setDraftChecklist((items) => {
+        const oldIndex = items.findIndex((item) => item.id === active.id)
+        const newIndex = items.findIndex((item) => item.id === over.id)
+        return arrayMove(items, oldIndex, newIndex)
+      })
+    }
+  }
 
   useEffect(() => {
     if (step === 'clarify' && inputRef.current) {
@@ -262,20 +338,31 @@ export function ClarifyWizard() {
               <h4 className="font-bold text-lg mb-2 text-foreground">Add Atomic Steps (Checklist)</h4>
               <p className="text-sm text-muted mb-4">Break this task down into immediate micro-actions. Optional, but strongly encouraged for tasks &gt; 15m.</p>
               
-              <div className="flex flex-col gap-2 mb-4">
-                {draftChecklist.map(item => (
-                  <div key={item.id} className="flex items-center gap-3 group/item bg-background border border-surface-border p-2 rounded-lg shadow-sm">
-                    <div className="w-4 h-4 rounded border border-surface-border flex items-center justify-center shrink-0"></div>
-                    <span className="text-sm flex-1 text-foreground">{item.text}</span>
-                    <button 
-                      onClick={() => setDraftChecklist(prev => prev.filter(c => c.id !== item.id))}
-                      className="p-1 text-muted hover:text-red-500 transition-opacity opacity-0 group-hover/item:opacity-100"
-                    >
-                      <X size={14} />
-                    </button>
+              <DndContext collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+                <SortableContext items={draftChecklist.map(x => x.id)} strategy={verticalListSortingStrategy}>
+                  <div className="flex flex-col gap-2 mb-4">
+                    {draftChecklist.map(item => (
+                      <SortableChecklistItem 
+                        key={item.id} 
+                        item={item} 
+                        onRemove={(id) => setDraftChecklist(prev => prev.filter(c => c.id !== id))} 
+                      />
+                    ))}
                   </div>
-                ))}
-              </div>
+                </SortableContext>
+                <DragOverlay>
+                  {activeDragId ? (
+                    <div className="flex items-center gap-3 bg-brand-50 dark:bg-brand-900/40 border border-brand-500 p-2 rounded-lg shadow-md opacity-90 z-50">
+                      <div className="cursor-grabbing p-1 text-brand-500 shrink-0">
+                        <GripVertical size={14} />
+                      </div>
+                      <div className="w-4 h-4 rounded border border-surface-border flex items-center justify-center shrink-0"></div>
+                      <span className="text-sm flex-1 text-foreground select-none">{draftChecklist.find(x => x.id === activeDragId)?.text}</span>
+                      <div className="w-5 h-5 shrink-0"></div>
+                    </div>
+                  ) : null}
+                </DragOverlay>
+              </DndContext>
               
               <form 
                 onSubmit={(e) => {
