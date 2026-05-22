@@ -18,7 +18,7 @@ export function MobileHub() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-background text-foreground relative">
+    <div className="flex flex-col w-full h-full bg-background text-foreground relative">
       {/* Top Header / Context & Meals */}
       <header className="px-3 py-2.5 sm:px-4 sm:py-3 border-b border-surface-border bg-surface/80 backdrop-blur flex items-center justify-between z-30 sticky top-0">
         <div className="flex items-center gap-1.5 sm:gap-2">

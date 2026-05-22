@@ -51,7 +51,7 @@ export default function Home() {
       </div>
 
       {/* Mobile View - Hidden on desktop */}
-      <div className="flex md:hidden flex-1 w-full h-full relative">
+      <div className="block md:hidden flex-1 w-full h-full relative">
         <MobileHub />
       </div>
     </main>
