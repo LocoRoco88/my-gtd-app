@@ -9,19 +9,41 @@ export function MoleskineView() {
   // Get today's actionable tasks (excluding inbox, someday, done)
   const todayTasks = tasks.filter(t => t.status === 'next_action' && t.type !== 'routine')
   
-  // Mock calendar events
-  const calendarEvents = [
-    { id: 'c1', title: 'Team Sync', time: '10:00 AM', isEvent: true },
-    { id: 'c2', title: 'Lunch with Sarah', time: '12:30 PM', isEvent: true },
-  ]
+  // Get today's date in YYYY-MM-DD format (local timezone)
+  const todayStr = new Date().toLocaleDateString('sv-SE')
+  
+  // Get today's events from the store
+  const todayEvents = tasks.filter(t => t.type === 'event' && t.event_date === todayStr)
+
+  // Map store events to the format expected by MoleskineView
+  const calendarEvents = todayEvents.map(event => {
+    let displayTime = ''
+    if (event.event_start_time) {
+      const [h, m] = event.event_start_time.split(':')
+      const hourNum = parseInt(h, 10)
+      const ampm = hourNum >= 12 ? 'PM' : 'AM'
+      const displayHour = hourNum % 12 === 0 ? 12 : hourNum % 12
+      displayTime = `${displayHour}:${m} ${ampm}`
+    }
+    return {
+      id: event.id,
+      title: event.title,
+      time: displayTime,
+      isEvent: true as const
+    }
+  })
+
+  // Sort events chronologically by start time
+  const sortedEvents = [...calendarEvents].sort((a, b) => {
+    const eventA = todayEvents.find(e => e.id === a.id)
+    const eventB = todayEvents.find(e => e.id === b.id)
+    return (eventA?.event_start_time || '').localeCompare(eventB?.event_start_time || '')
+  })
 
   // Mix tasks and events for the Moleskine view
-  // In a real app, this would be chronologically sorted.
   const mixedItems = [
-    calendarEvents[0],
-    ...todayTasks.slice(0, 1),
-    calendarEvents[1],
-    ...todayTasks.slice(1)
+    ...sortedEvents,
+    ...todayTasks
   ]
 
   return (

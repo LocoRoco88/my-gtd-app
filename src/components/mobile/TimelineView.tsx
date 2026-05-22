@@ -27,7 +27,7 @@ export function TimelineView() {
   const todayTasks = tasks.filter(t => t.status === 'next_action')
   
   // Parse actual events for today
-  const dateStr = currentTime.toISOString().split('T')[0]
+  const dateStr = currentTime.toLocaleDateString('sv-SE')
   const todayEvents = tasks.filter(t => t.type === 'event' && t.event_date === dateStr)
 
   const eventBlocks = todayEvents.map(event => {
