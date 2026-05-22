@@ -6,10 +6,21 @@ import { AlertTriangle, ActivitySquare, BarChart3, Clock, Zap, Sunrise, SunMediu
 import { format, isToday, isYesterday, parseISO, startOfMonth, endOfMonth, startOfWeek, endOfWeek, addDays, subMonths, addMonths, isSameMonth, isSameDay } from 'date-fns'
 
 export function ReflectView() {
-  const { projects, tasks, timeLogs, dailyReflections, setDailyReflection } = useStore()
+  const { projects, tasks, timeLogs, dailyReflections, setDailyReflection, setSelectedProjectId, setDesktopTab } = useStore()
   const [activeTab, setActiveTab] = useState<'logbook' | 'review'>('logbook')
   const [selectedDate, setSelectedDate] = useState<Date>(new Date())
   const [currentMonth, setCurrentMonth] = useState<Date>(new Date())
+  const [showCelebration, setShowCelebration] = useState(false)
+
+  const getWeeklyCompletedCount = () => {
+    const startOfThisWeek = startOfWeek(new Date(), { weekStartsOn: 1 })
+    const endOfThisWeek = endOfWeek(new Date(), { weekStartsOn: 1 })
+    return tasks.filter(t => {
+      if (t.status !== 'done' || !t.completed_at) return false
+      const completedDate = parseISO(t.completed_at)
+      return completedDate >= startOfThisWeek && completedDate <= endOfThisWeek
+    }).length
+  }
 
   const stagnantProjects = projects.filter(p => {
     if (p.status !== 'active') return false
@@ -136,7 +147,13 @@ export function ReflectView() {
                   {stagnantProjects.map(p => (
                     <div key={p.id} className="p-3 bg-background border border-red-200 dark:border-red-900/50 rounded-xl flex items-center justify-between shadow-sm">
                       <span className="font-semibold text-sm">{p.title}</span>
-                      <button className="text-xs bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 px-3 py-1.5 rounded-lg font-medium transition-colors">
+                      <button 
+                        onClick={() => {
+                          setSelectedProjectId(p.id)
+                          setDesktopTab('projects')
+                        }}
+                        className="text-xs bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:hover:bg-red-900/50 text-red-700 dark:text-red-300 px-3 py-1.5 rounded-lg font-medium transition-colors cursor-pointer"
+                      >
                         Fix Now
                       </button>
                     </div>
@@ -193,7 +210,10 @@ export function ReflectView() {
           <div className="glass rounded-2xl p-6 border border-surface-border text-center flex-1 flex flex-col items-center justify-center">
             <h3 className="text-xl font-bold mb-2">Weekly Review Complete?</h3>
             <p className="text-muted mb-6 max-w-md mx-auto">Once you have cleared your inbox, checked your system integrity, and reviewed your calendar, mark your review as complete.</p>
-            <button className="bg-brand-600 hover:bg-brand-500 text-white font-bold py-3 px-8 rounded-xl shadow-md shadow-brand-500/20 transition-all active:scale-[0.98]">
+            <button 
+              onClick={() => setShowCelebration(true)}
+              className="bg-brand-600 hover:bg-brand-500 text-white font-bold py-3 px-8 rounded-xl shadow-md shadow-brand-500/20 transition-all active:scale-[0.98] cursor-pointer"
+            >
               Sign Off Week
             </button>
           </div>
@@ -383,6 +403,28 @@ export function ReflectView() {
                 </div>
               )
             })()}
+          </div>
+        </div>
+      )}
+      {showCelebration && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-background/85 dark:bg-surface/85 border border-surface-border p-8 rounded-2xl max-w-md w-full mx-4 shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95 duration-300">
+            <div className="w-20 h-20 bg-green-100 dark:bg-green-950/40 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center text-4xl mb-6 shadow-inner animate-bounce">
+              🎉
+            </div>
+            <h3 className="text-2xl font-black text-foreground mb-2">Weekly Review Complete!</h3>
+            <p className="text-muted mb-6 text-sm">
+              Incredible job organizing your system. You completed <span className="font-bold text-brand-600 dark:text-brand-400 text-lg">{getWeeklyCompletedCount()}</span> task{getWeeklyCompletedCount() === 1 ? '' : 's'} this week!
+            </p>
+            <div className="bg-brand-50 dark:bg-brand-950/20 border border-brand-100 dark:border-brand-900 rounded-xl p-4 mb-6 w-full text-xs text-brand-800 dark:text-brand-300 font-medium">
+              &ldquo;Your mind is for having ideas, not holding them.&rdquo; — David Allen
+            </div>
+            <button
+              onClick={() => setShowCelebration(false)}
+              className="w-full bg-brand-600 hover:bg-brand-500 text-white font-bold py-3 rounded-xl transition-all shadow-md shadow-brand-500/20 active:scale-[0.98] cursor-pointer"
+            >
+              Hooray!
+            </button>
           </div>
         </div>
       )}

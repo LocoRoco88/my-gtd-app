@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { useStore, Task, ChecklistItem } from '@/lib/store'
 import { Check, Trash2, Tag, FolderKanban, ListChecks, Plus, X } from 'lucide-react'
+import { TimeBadge } from '@/components/ui/TimeBadge'
 
 export function NextActionsView() {
   const { tasks, projects, updateTask, deleteTask } = useStore()
@@ -93,6 +94,8 @@ export function NextActionsView() {
   const TaskRow = ({ task, showProjectBadge = false }: { task: Task, showProjectBadge?: boolean }) => {
     const [isExpanded, setIsExpanded] = useState(false)
     const [newItemText, setNewItemText] = useState('')
+    const [showSmartPaste, setShowSmartPaste] = useState(false)
+    const [smartPasteText, setSmartPasteText] = useState('')
     
     const project = showProjectBadge && task.project_id ? projects.find(p => p.id === task.project_id) : null
     const checklist = task.checklist || []
@@ -133,9 +136,7 @@ export function NextActionsView() {
             <div className="flex flex-col overflow-hidden">
               <span className="font-semibold text-foreground truncate">{task.title}</span>
               <div className="flex items-center gap-2 mt-1">
-                {task.time_estimate_minutes && (
-                  <span className="text-xs text-muted font-medium shrink-0">{task.time_estimate_minutes}m</span>
-                )}
+                <TimeBadge task={task} />
                 {checklist.length > 0 && (
                   <span className={`flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded ${completedCount === checklist.length ? 'text-green-600 bg-green-100 dark:bg-green-900/30' : 'text-muted bg-surface-border'}`}>
                     <ListChecks size={10} /> {completedCount}/{checklist.length}
@@ -165,6 +166,45 @@ export function NextActionsView() {
         {/* Inline Checklist Expansion */}
         {isExpanded && (
           <div className="mt-4 pt-4 border-t border-surface-border animate-in slide-in-from-top-2 duration-200" onClick={(e) => e.stopPropagation()}>
+            
+            {/* Time Estimate Editor */}
+            <div className="ml-10 mb-4 pb-4 border-b border-surface-border/50">
+              <span className="text-xs font-bold text-muted uppercase tracking-wider block mb-2">Tidsestimat</span>
+              <div className="flex flex-wrap items-center gap-2">
+                {[
+                  { label: '5m', value: 5 },
+                  { label: '15m', value: 15 },
+                  { label: '30m', value: 30 },
+                  { label: '1t', value: 60 },
+                  { label: '2t', value: 120 }
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => updateTask(task.id, { time_estimate_minutes: opt.value })}
+                    className={`py-1 px-2.5 rounded-lg border text-xs font-semibold transition-all ${
+                      task.time_estimate_minutes === opt.value
+                        ? 'bg-brand-600 border-brand-600 text-white shadow-sm'
+                        : 'bg-background border-surface-border text-foreground hover:bg-surface-border'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+                <div className="flex items-center gap-1.5 ml-auto">
+                  <input
+                    type="number"
+                    min="1"
+                    value={task.time_estimate_minutes || ''}
+                    onChange={(e) => updateTask(task.id, { time_estimate_minutes: Number(e.target.value) || undefined })}
+                    className="w-14 bg-background border border-surface-border rounded-lg px-2 py-1 outline-none focus:ring-2 focus:ring-brand-500 text-xs font-semibold text-center text-foreground"
+                  />
+                  <span className="text-xs text-muted">min.</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Checklist items */}
             <div className="flex flex-col gap-2 ml-10 mb-3">
               {checklist.map((item: ChecklistItem) => (
                 <div key={item.id} className="flex items-center gap-3 group/item">
@@ -198,6 +238,79 @@ export function NextActionsView() {
                 autoFocus
               />
             </form>
+
+            <div className="mt-2 text-right">
+              <button
+                type="button"
+                onClick={() => setShowSmartPaste(!showSmartPaste)}
+                className="text-[11px] text-brand-500 hover:text-brand-600 font-semibold transition-colors"
+              >
+                {showSmartPaste ? 'Skjul Smart Paste' : 'Brug Smart Paste (AI listen)'}
+              </button>
+            </div>
+
+            {showSmartPaste && (
+              <div className="mt-3 ml-10 p-3 border border-surface-border rounded-xl bg-background animate-in slide-in-from-top-2 duration-200">
+                <label className="text-[11px] font-semibold text-muted mb-1.5 block">
+                  Indsæt din punktopstilling fra fx ChatGPT / Claude / Gemini:
+                </label>
+                <textarea
+                  value={smartPasteText}
+                  onChange={(e) => setSmartPasteText(e.target.value)}
+                  placeholder={`Eksempel:
+- Skriv kladde til mail
+- Send mail til bossen
+- Afvent svar`}
+                  rows={3}
+                  className="w-full bg-surface-hover-light dark:bg-surface-hover-dark border border-surface-border rounded-lg p-2 text-xs text-foreground outline-none focus:ring-2 focus:ring-brand-500 placeholder:text-muted/60 resize-y mb-2 font-mono"
+                />
+                <div className="flex gap-2 justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSmartPasteText('')
+                      setShowSmartPaste(false)
+                    }}
+                    className="px-2 py-1 rounded-md border border-surface-border text-[11px] font-semibold hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark text-foreground transition-colors"
+                  >
+                    Annuller
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!smartPasteText.trim()) return
+                      const lines = smartPasteText.split('\n')
+                      const parsedItems = lines
+                        .map(line => line.trim())
+                        .filter(line => line.length > 0)
+                        .map(line => {
+                          const match = line.match(/^([-*•+]|\d+\.)\s*(.+)$/)
+                          if (match) {
+                            return match[2].trim()
+                          }
+                          if (/^[-*•+]$/.test(line)) return null
+                          return line
+                        })
+                        .filter((item): item is string => item !== null && item.length > 0)
+
+                      if (parsedItems.length > 0) {
+                        const newChecklistItems = parsedItems.map(text => ({
+                          id: crypto.randomUUID(),
+                          text,
+                          is_completed: false
+                        }))
+                        updateTask(task.id, { checklist: [...checklist, ...newChecklistItems] })
+                      }
+                      setSmartPasteText('')
+                      setShowSmartPaste(false)
+                    }}
+                    className="px-2 py-1 rounded-md bg-brand-600 hover:bg-brand-500 text-white text-[11px] font-semibold transition-all shadow-sm"
+                  >
+                    Importer delopgaver
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

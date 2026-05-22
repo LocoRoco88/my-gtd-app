@@ -3,10 +3,28 @@
 import { useState } from 'react'
 import { useStore, Task, ChecklistItem } from '@/lib/store'
 import { AlertTriangle, Plus, FolderKanban, ListChecks, X, Check, Trash2 } from 'lucide-react'
+import { TimeBadge } from '@/components/ui/TimeBadge'
 
 export function ProjectDashboard() {
-  const { projects, tasks } = useStore()
-  const [selectedProjectId, setSelectedProjectId] = useState<string | null>(null)
+  const { 
+    projects, 
+    tasks, 
+    addProject, 
+    addTask, 
+    updateTask, 
+    deleteTask, 
+    selectedProjectId, 
+    setSelectedProjectId 
+  } = useStore()
+
+  // Project creation form states
+  const [isCreatingProject, setIsCreatingProject] = useState(false)
+  const [newProjectTitle, setNewProjectTitle] = useState('')
+  const [newProjectOutcome, setNewProjectOutcome] = useState('')
+
+  // Task inline creation state
+  const [isAddingTask, setIsAddingTask] = useState(false)
+  const [newTaskTitle, setNewTaskTitle] = useState('')
 
   const activeProjects = projects.filter(p => p.status === 'active')
 
@@ -19,7 +37,51 @@ export function ProjectDashboard() {
   const selectedProject = projects.find(p => p.id === selectedProjectId)
   const projectTasks = selectedProject ? tasks.filter(t => t.project_id === selectedProject.id) : []
 
-  const { updateTask, deleteTask } = useStore()
+  const handleStartCreateProject = () => {
+    setNewProjectTitle('')
+    setNewProjectOutcome('')
+    setIsCreatingProject(true)
+    setSelectedProjectId(null)
+  }
+
+  const handleCreateProject = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!newProjectTitle.trim()) return
+
+    const newId = crypto.randomUUID()
+    addProject({
+      id: newId,
+      title: newProjectTitle.trim(),
+      outcome: newProjectOutcome.trim() || 'Define desired outcome',
+      status: 'active'
+    })
+
+    setSelectedProjectId(newId)
+    setIsCreatingProject(false)
+  }
+
+  const handleStartAddTask = () => {
+    setNewTaskTitle('')
+    setIsAddingTask(true)
+  }
+
+  const handleAddTask = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedProject || !newTaskTitle.trim()) return
+
+    addTask({
+      id: crypto.randomUUID(),
+      title: newTaskTitle.trim(),
+      status: 'next_action',
+      type: 'standard',
+      is_routine: false,
+      context: null,
+      project_id: selectedProject.id
+    })
+
+    setNewTaskTitle('')
+    setIsAddingTask(false)
+  }
 
   const TaskRow = ({ task }: { task: Task }) => {
     const [isExpanded, setIsExpanded] = useState(false)
@@ -68,9 +130,7 @@ export function ProjectDashboard() {
                 {task.title}
               </span>
               <div className="flex items-center gap-2 mt-0.5">
-                {task.time_estimate_minutes && (
-                  <span className="text-[10px] text-muted font-medium shrink-0">{task.time_estimate_minutes}m</span>
-                )}
+                <TimeBadge task={task} />
                 {checklist.length > 0 && (
                   <span className={`flex items-center gap-1 text-[9px] font-bold px-1 rounded ${completedCount === checklist.length ? 'text-green-600 bg-green-100 dark:bg-green-900/30' : 'text-muted bg-surface-border'}`}>
                     <ListChecks size={8} /> {completedCount}/{checklist.length}
@@ -134,13 +194,16 @@ export function ProjectDashboard() {
   }
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-full flex flex-col font-sans">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">Active Projects</h2>
           <p className="text-muted mt-1">Manage outcomes that require multiple steps.</p>
         </div>
-        <button className="bg-brand-600 hover:bg-brand-500 text-white font-medium px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm transition-colors">
+        <button 
+          onClick={handleStartCreateProject}
+          className="bg-brand-600 hover:bg-brand-500 text-white font-medium px-4 py-2.5 rounded-xl flex items-center gap-2 shadow-sm transition-colors cursor-pointer"
+        >
           <Plus size={18} /> New Project
         </button>
       </div>
@@ -155,7 +218,11 @@ export function ProjectDashboard() {
             return (
               <button
                 key={project.id}
-                onClick={() => setSelectedProjectId(project.id)}
+                onClick={() => {
+                  setSelectedProjectId(project.id)
+                  setIsCreatingProject(false)
+                  setIsAddingTask(false)
+                }}
                 className={`relative flex flex-col text-left p-4 rounded-xl border transition-all ${
                   isSelected 
                     ? 'bg-brand-50 dark:bg-brand-900/20 border-brand-300 dark:border-brand-700 shadow-md' 
@@ -180,8 +247,53 @@ export function ProjectDashboard() {
         </div>
 
         {/* Project Detail */}
-        <div className="flex-1 glass rounded-2xl border border-surface-border p-6 overflow-y-auto no-scrollbar relative">
-          {selectedProject ? (
+        <div className="flex-1 glass rounded-2xl border border-surface-border p-6 overflow-y-auto no-scrollbar relative min-h-[400px]">
+          {isCreatingProject ? (
+            <form onSubmit={handleCreateProject} className="animate-in fade-in duration-300 flex flex-col gap-6">
+              <h3 className="text-xl font-bold">New Project</h3>
+
+              <div className="flex flex-col gap-4">
+                <div>
+                  <label className="text-sm font-semibold text-muted mb-2 block">Project Title</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Redesign Homepage, Prepare Tax Return"
+                    className="w-full bg-background border border-surface-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:ring-2 focus:ring-brand-500"
+                    value={newProjectTitle}
+                    onChange={(e) => setNewProjectTitle(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold text-muted mb-2 block">Desired Outcome (Success Criteria)</label>
+                  <textarea
+                    rows={4}
+                    placeholder="What does success look like? (e.g. Homepage is live with a modern design system and mobile responsive layout)"
+                    className="w-full bg-background border border-surface-border rounded-xl px-4 py-2.5 text-foreground outline-none focus:ring-2 focus:ring-brand-500 resize-none"
+                    value={newProjectOutcome}
+                    onChange={(e) => setNewProjectOutcome(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setIsCreatingProject(false)}
+                  className="flex-1 bg-surface-hover-light dark:bg-surface-hover-dark hover:bg-surface-border text-foreground font-semibold py-2.5 px-4 rounded-xl border border-surface-border transition-colors text-sm"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-brand-600 hover:bg-brand-500 text-white font-semibold py-2.5 px-4 rounded-xl transition-colors text-sm"
+                >
+                  Create Project
+                </button>
+              </div>
+            </form>
+          ) : selectedProject ? (
             <div className="animate-in fade-in duration-300">
               {isProjectStagnant(selectedProject.id) && (
                 <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-800 dark:text-red-300 p-4 rounded-xl flex items-start gap-3">
@@ -204,13 +316,44 @@ export function ProjectDashboard() {
                 <div>
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold">Tasks</h3>
-                    <button className="text-brand-600 dark:text-brand-400 hover:underline text-sm font-medium flex items-center">
+                    <button 
+                      onClick={handleStartAddTask}
+                      className="text-brand-600 dark:text-brand-400 hover:underline text-sm font-medium flex items-center cursor-pointer"
+                    >
                       <Plus size={14} className="mr-1" /> Add
                     </button>
                   </div>
                   
                   <div className="flex flex-col gap-2">
-                    {projectTasks.length === 0 ? (
+                    {isAddingTask && (
+                      <form onSubmit={handleAddTask} className="flex items-center gap-2 p-2 bg-surface hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark rounded-lg border border-brand-500 shadow-sm animate-in slide-in-from-top-2 duration-200">
+                        <input
+                          type="text"
+                          required
+                          autoFocus
+                          placeholder="What is the next action?"
+                          className="flex-1 bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted"
+                          value={newTaskTitle}
+                          onChange={(e) => setNewTaskTitle(e.target.value)}
+                        />
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="submit"
+                            className="p-1 rounded-md text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/20 transition-colors"
+                          >
+                            <Check size={14} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setIsAddingTask(false)}
+                            className="p-1 rounded-md text-muted hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+                          >
+                            <X size={14} />
+                          </button>
+                        </div>
+                      </form>
+                    )}
+                    {projectTasks.length === 0 && !isAddingTask ? (
                       <p className="text-muted text-sm italic">No tasks. Define a next action.</p>
                     ) : (
                       projectTasks.map(task => (

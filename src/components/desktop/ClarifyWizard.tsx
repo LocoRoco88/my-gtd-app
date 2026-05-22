@@ -91,6 +91,11 @@ export function ClarifyWizard() {
   const [draftChecklistItem, setDraftChecklistItem] = useState('')
   const [activeDragId, setActiveDragId] = useState<string | null>(null)
 
+  // Time Estimation & Smart Paste local states
+  const [clarifyTimeEstimate, setClarifyTimeEstimate] = useState<number>(15)
+  const [showSmartPaste, setShowSmartPaste] = useState(false)
+  const [smartPasteText, setSmartPasteText] = useState('')
+
   const handleDragStart = (event: DragStartEvent) => {
     setActiveDragId(String(event.active.id))
   }
@@ -127,6 +132,9 @@ export function ClarifyWizard() {
     setRoutineTimeEstimate('30')
     setDraftChecklist([])
     setDraftChecklistItem('')
+    setClarifyTimeEstimate(15)
+    setShowSmartPaste(false)
+    setSmartPasteText('')
     setCurrentTaskTitle(activeTask?.title || '')
   }, [activeTask?.id])
 
@@ -187,9 +195,20 @@ export function ClarifyWizard() {
 
   const handleProjectOrRoutine = (projectIdOrAction: string) => {
     if (projectIdOrAction === 'none') {
-      updateTask(activeTask.id, { status: 'next_action', title: currentTaskTitle, checklist: draftChecklist })
+      updateTask(activeTask.id, { 
+        status: 'next_action', 
+        title: currentTaskTitle, 
+        checklist: draftChecklist,
+        time_estimate_minutes: clarifyTimeEstimate
+      })
     } else {
-      updateTask(activeTask.id, { status: 'next_action', project_id: projectIdOrAction, title: currentTaskTitle, checklist: draftChecklist })
+      updateTask(activeTask.id, { 
+        status: 'next_action', 
+        project_id: projectIdOrAction, 
+        title: currentTaskTitle, 
+        checklist: draftChecklist,
+        time_estimate_minutes: clarifyTimeEstimate
+      })
     }
     setStep('clarify')
   }
@@ -382,7 +401,117 @@ export function ClarifyWizard() {
                   onChange={(e) => setDraftChecklistItem(e.target.value)}
                 />
               </form>
+
+              <div className="mt-3 text-right">
+                <button
+                  type="button"
+                  onClick={() => setShowSmartPaste(!showSmartPaste)}
+                  className="text-xs text-brand-500 hover:text-brand-600 font-semibold transition-colors"
+                >
+                  {showSmartPaste ? 'Skjul Smart Paste' : 'Brug Smart Paste (AI listen)'}
+                </button>
+              </div>
+
+              {showSmartPaste && (
+                <div className="mt-4 p-4 border border-surface-border rounded-xl bg-background animate-in slide-in-from-top-2 duration-200">
+                  <label className="text-xs font-semibold text-muted mb-2 block">
+                    Indsæt din punktopstilling fra fx ChatGPT / Claude / Gemini:
+                  </label>
+                  <textarea
+                    value={smartPasteText}
+                    onChange={(e) => setSmartPasteText(e.target.value)}
+                    placeholder={`Eksempel:
+- Skriv kladde til mail
+- Send mail til bossen
+- Afvent svar`}
+                    rows={4}
+                    className="w-full bg-surface-hover-light dark:bg-surface-hover-dark border border-surface-border rounded-xl p-3 text-sm text-foreground outline-none focus:ring-2 focus:ring-brand-500 placeholder:text-muted/60 resize-y mb-3 font-mono"
+                  />
+                  <div className="flex gap-2 justify-end">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSmartPasteText('')
+                        setShowSmartPaste(false)
+                      }}
+                      className="px-3 py-1.5 rounded-lg border border-surface-border text-xs font-semibold hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark text-foreground transition-colors"
+                    >
+                      Annuller
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!smartPasteText.trim()) return
+                        const lines = smartPasteText.split('\n')
+                        const parsedItems = lines
+                          .map(line => line.trim())
+                          .filter(line => line.length > 0)
+                          .map(line => {
+                            const match = line.match(/^([-*•+]|\d+\.)\s*(.+)$/)
+                            if (match) {
+                              return match[2].trim()
+                            }
+                            if (/^[-*•+]$/.test(line)) return null
+                            return line
+                          })
+                          .filter((item): item is string => item !== null && item.length > 0)
+
+                        if (parsedItems.length > 0) {
+                          setDraftChecklist(prev => [
+                            ...prev,
+                            ...parsedItems.map(text => ({ id: crypto.randomUUID(), text, is_completed: false }))
+                          ])
+                        }
+                        setSmartPasteText('')
+                        setShowSmartPaste(false)
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-brand-600 hover:bg-brand-500 text-white text-xs font-semibold transition-all shadow-sm"
+                    >
+                      Importer delopgaver
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
+
+            {!isRoutineMode && (
+              <div className="mb-8 border border-surface-border rounded-xl p-6 bg-surface-hover-light dark:bg-surface-hover-dark shadow-sm">
+                <h4 className="font-bold text-lg mb-2 text-foreground">Tidsestimat</h4>
+                <p className="text-sm text-muted mb-4">Hvor lang tid vil denne handling tage?</p>
+                <div className="flex flex-wrap items-center gap-3">
+                  {[
+                    { label: '5m', value: 5 },
+                    { label: '15m', value: 15 },
+                    { label: '30m', value: 30 },
+                    { label: '1t', value: 60 },
+                    { label: '2t', value: 120 }
+                  ].map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setClarifyTimeEstimate(opt.value)}
+                      className={`py-2 px-4 rounded-xl border text-sm font-semibold transition-all ${
+                        clarifyTimeEstimate === opt.value
+                          ? 'bg-brand-600 border-brand-600 text-white shadow-md shadow-brand-500/10'
+                          : 'bg-background border-surface-border text-foreground hover:bg-surface-border'
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                  <div className="flex items-center gap-2 ml-auto">
+                    <input
+                      type="number"
+                      min="1"
+                      value={clarifyTimeEstimate || ''}
+                      onChange={(e) => setClarifyTimeEstimate(Number(e.target.value) || 0)}
+                      className="w-20 bg-background border border-surface-border rounded-xl px-3 py-2 outline-none focus:ring-2 focus:ring-brand-500 text-sm font-semibold text-center text-foreground"
+                    />
+                    <span className="text-sm text-muted">min.</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex flex-col gap-3">
               {!isRoutineMode ? (

@@ -78,6 +78,8 @@ interface AppState {
   
   projects: Project[]
   addProject: (p: Project) => void
+  selectedProjectId: string | null
+  setSelectedProjectId: (id: string | null) => void
   
   // Settings
   workSchedule: WorkSchedule
@@ -122,6 +124,8 @@ export const useStore = create<AppState>((set, get) => ({
     set((state) => ({ projects: [...state.projects, p] }))
     try { await api.createProject(p) } catch (err) { console.error('Failed to sync project:', err) }
   },
+  selectedProjectId: null,
+  setSelectedProjectId: (id) => set({ selectedProjectId: id }),
 
   workSchedule: {
     1: { isActive: true, startHour: '09:00', endHour: '17:00' }, // Mon

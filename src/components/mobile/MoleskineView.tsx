@@ -2,6 +2,7 @@
 
 import { useStore, Task } from '@/lib/store'
 import { Play, Calendar as CalendarIcon } from 'lucide-react'
+import { TimeBadge } from '@/components/ui/TimeBadge'
 
 export function MoleskineView() {
   const { tasks, startFocus } = useStore()
@@ -73,9 +74,12 @@ export function MoleskineView() {
               <div className="w-1.5 h-8 bg-brand-400 rounded-full"></div>
               <div className="flex-1 font-sans">
                 <h3 className="font-bold text-sm sm:text-base leading-tight">{task.title}</h3>
-                {task.context && (
-                  <span className="text-xs text-muted font-medium mt-0.5 inline-block">{task.context}</span>
-                )}
+                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                  {task.context && (
+                    <span className="text-xs text-muted font-medium">{task.context}</span>
+                  )}
+                  <TimeBadge task={task} />
+                </div>
               </div>
               <button 
                 onClick={() => startFocus(task.id)}
