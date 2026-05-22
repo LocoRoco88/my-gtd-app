@@ -11,9 +11,9 @@ export function ContextSelector() {
     <div className="relative">
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-1.5 bg-surface hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark border border-surface-border px-3 py-1.5 rounded-full text-sm font-medium transition-colors"
+        className="flex items-center gap-1 min-[360px]:gap-1.5 bg-surface hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark border border-surface-border px-2.5 py-1 min-[360px]:px-3 min-[360px]:py-1.5 rounded-full text-xs min-[360px]:text-sm font-medium transition-colors"
       >
-        <MapPin size={14} className="text-brand-500" />
+        <MapPin className="text-brand-500 w-3.5 h-3.5 min-[360px]:w-3.5 min-[360px]:h-3.5" />
         <span>Context</span>
       </button>
 

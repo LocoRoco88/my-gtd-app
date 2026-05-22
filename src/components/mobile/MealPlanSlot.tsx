@@ -22,9 +22,9 @@ export function MealPlanSlot() {
     <>
       <button 
         onClick={() => setIsOpen(true)}
-        className="w-8 h-8 rounded-full bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/30 dark:hover:bg-orange-900/50 text-orange-600 dark:text-orange-400 flex items-center justify-center transition-colors shadow-sm"
+        className="w-7 h-7 min-[360px]:w-8 min-[360px]:h-8 rounded-full bg-orange-100 hover:bg-orange-200 dark:bg-orange-900/30 dark:hover:bg-orange-900/50 text-orange-600 dark:text-orange-400 flex items-center justify-center transition-colors shadow-sm shrink-0"
       >
-        <Utensils size={16} />
+        <Utensils className="w-3.5 h-3.5 min-[360px]:w-4 min-[360px]:h-4" />
       </button>
 
       {/* Slide-up Panel */}

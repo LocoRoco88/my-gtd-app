@@ -20,14 +20,14 @@ export function MobileHub() {
   return (
     <div className="flex flex-col h-full bg-background text-foreground relative">
       {/* Top Header / Context & Meals */}
-      <header className="px-4 py-3 border-b border-surface-border bg-surface/80 backdrop-blur flex items-center justify-between z-30 sticky top-0">
-        <div className="flex items-center gap-2">
+      <header className="px-3 py-2.5 sm:px-4 sm:py-3 border-b border-surface-border bg-surface/80 backdrop-blur flex items-center justify-between z-30 sticky top-0">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <div className="w-8 h-8 bg-brand-500 rounded-lg flex items-center justify-center text-white font-bold shadow-md shadow-brand-500/20">
             GTD
           </div>
-          <span className="font-bold tracking-tight">On The Move</span>
+          <span className="font-bold tracking-tight max-[380px]:hidden">On The Move</span>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <ContextSelector />
           <MealPlanSlot />
         </div>
