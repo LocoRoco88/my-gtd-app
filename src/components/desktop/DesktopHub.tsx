@@ -9,6 +9,7 @@ import { ReflectView } from './ReflectView'
 import { SettingsView } from './SettingsView'
 import { RoutineDashboard } from './RoutineDashboard'
 import { NextActionsView } from './NextActionsView'
+import { DesktopCaptureBar } from './DesktopCaptureBar'
 
 export function DesktopHub() {
   const { desktopTab, setDesktopTab } = useStore()
@@ -56,7 +57,7 @@ export function DesktopHub() {
 
       {/* Main Content Area */}
       <main className="flex-1 flex flex-col relative overflow-hidden bg-background">
-        <div className="absolute inset-0 overflow-y-auto p-8">
+        <div className="absolute inset-0 overflow-y-auto p-8 pb-28">
           {desktopTab === 'clarify' && <ClarifyWizard />}
           {desktopTab === 'next_actions' && <NextActionsView />}
           {desktopTab === 'plan' && <WeeklyPlanningWizard />}
@@ -64,6 +65,11 @@ export function DesktopHub() {
           {desktopTab === 'routines' && <RoutineDashboard />}
           {desktopTab === 'reflect' && <ReflectView />}
           {desktopTab === 'settings' && <SettingsView />}
+        </div>
+        
+        {/* Floating Desktop Capture Bar */}
+        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full max-w-2xl px-8 z-30">
+          <DesktopCaptureBar />
         </div>
       </main>
     </div>
