@@ -15,10 +15,13 @@ export function FocusTrackerBar() {
     resumeFocus, 
     stopFocus, 
     completeFocus,
-    tasks 
+    tasks,
+    updateTask
   } = useStore()
   
   const [showStopPrompt, setShowStopPrompt] = useState(false)
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [nameInput, setNameInput] = useState('')
 
   // Timer tick
   useEffect(() => {
@@ -31,10 +34,16 @@ export function FocusTrackerBar() {
     return () => clearInterval(interval)
   }, [focusState, tickTimer])
 
-  if (!activeTaskId || focusState === 'IDLE') return null
-
   const task = tasks.find((t: Task) => t.id === activeTaskId)
-  if (!task) return null
+
+  // Sync task title with nameInput when task changes
+  useEffect(() => {
+    if (task) {
+      setNameInput(task.title)
+    }
+  }, [task?.title])
+
+  if (!activeTaskId || focusState === 'IDLE' || !task) return null
 
   const formatTime = (seconds: number) => {
     const h = Math.floor(seconds / 3600)
@@ -68,13 +77,38 @@ export function FocusTrackerBar() {
     stopFocus()
   }
 
+  const handleSaveName = () => {
+    setIsEditingName(false)
+    if (task && nameInput.trim() !== '') {
+      updateTask(task.id, { title: nameInput.trim() })
+    }
+  }
+
   return (
     <>
       <div className="bg-brand-900 text-white shadow-lg border-b border-brand-800 flex items-center justify-between px-6 py-3 w-full z-40 relative animate-in slide-in-from-top-full">
         <div className="flex items-center gap-4 flex-1">
           <div className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.8)]" />
-          <div className="flex flex-col">
-            <span className="font-bold text-sm truncate max-w-[500px] leading-tight">{title}</span>
+          <div className="flex flex-col flex-1">
+            {isEditingName ? (
+              <input
+                type="text"
+                value={nameInput}
+                onChange={(e) => setNameInput(e.target.value)}
+                onBlur={handleSaveName}
+                onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
+                className="bg-white/10 text-white font-bold text-sm px-2 py-0.5 rounded outline-none border border-white/20 focus:border-white/50 focus:ring-1 focus:ring-white/20 w-full max-w-[400px] leading-tight"
+                autoFocus
+              />
+            ) : (
+              <span 
+                onClick={() => setIsEditingName(true)}
+                className="font-bold text-sm truncate max-w-[500px] leading-tight hover:bg-white/10 px-2 py-0.5 rounded cursor-pointer transition-colors"
+                title="Click to rename action"
+              >
+                {title || <span className="italic text-white/55">Unnamed Action (Click to name)</span>}
+              </span>
+            )}
             <div className="flex items-center gap-2 mt-0.5 opacity-80 text-[10px] uppercase font-bold tracking-wider">
               {task.context && (
                 <span className="bg-white/20 px-1.5 py-0.5 rounded">{task.context.replace(/[\[\]]/g, '')}</span>

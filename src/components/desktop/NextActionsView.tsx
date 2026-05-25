@@ -2,12 +2,14 @@
 
 import { useState } from 'react'
 import { useStore, Task, ChecklistItem } from '@/lib/store'
-import { Check, Trash2, Tag, FolderKanban, ListChecks, Plus, X, Play } from 'lucide-react'
+import { Check, Trash2, Tag, FolderKanban, ListChecks, Plus, X, Play, Dices } from 'lucide-react'
 import { TimeBadge } from '@/components/ui/TimeBadge'
+import { RandomSprintModal } from '@/components/ui/RandomSprintModal'
 
 export function NextActionsView() {
   const { tasks, projects, updateTask, deleteTask, startFocus } = useStore()
   const [groupBy, setGroupBy] = useState<'project' | 'context'>('project')
+  const [isSprintModalOpen, setIsSprintModalOpen] = useState(false)
 
   // Filter for next actions (exclude events and routines)
   const nextActions = tasks.filter(t => t.status === 'next_action' && t.type === 'standard' && !t.is_routine)
@@ -334,19 +336,28 @@ export function NextActionsView() {
           <p className="text-muted mt-1">Master list of all unscheduled, actionable items.</p>
         </div>
 
-        <div className="bg-surface p-1 rounded-xl flex items-center border border-surface-border shadow-sm">
+        <div className="flex items-center gap-3">
           <button 
-            onClick={() => setGroupBy('project')}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${groupBy === 'project' ? 'bg-background shadow-sm text-brand-600 dark:text-brand-400' : 'text-muted hover:text-foreground'}`}
+            onClick={() => setIsSprintModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-tr from-brand-600 to-indigo-650 hover:from-brand-500 hover:to-indigo-550 text-white rounded-xl text-sm font-bold transition-all shadow-md shadow-brand-500/10 active:scale-[0.98] cursor-pointer"
           >
-            By Project
+            <Dices size={16} /> Random Sprint
           </button>
-          <button 
-            onClick={() => setGroupBy('context')}
-            className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${groupBy === 'context' ? 'bg-background shadow-sm text-brand-600 dark:text-brand-400' : 'text-muted hover:text-foreground'}`}
-          >
-            By Context
-          </button>
+
+          <div className="bg-surface p-1 rounded-xl flex items-center border border-surface-border shadow-sm">
+            <button 
+              onClick={() => setGroupBy('project')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${groupBy === 'project' ? 'bg-background shadow-sm text-brand-600 dark:text-brand-400' : 'text-muted hover:text-foreground'}`}
+            >
+              By Project
+            </button>
+            <button 
+              onClick={() => setGroupBy('context')}
+              className={`px-4 py-2 rounded-lg text-sm font-semibold transition-all ${groupBy === 'context' ? 'bg-background shadow-sm text-brand-600 dark:text-brand-400' : 'text-muted hover:text-foreground'}`}
+            >
+              By Context
+            </button>
+          </div>
         </div>
       </div>
 
@@ -360,6 +371,8 @@ export function NextActionsView() {
           renderGroupedTasks()
         )}
       </div>
+
+      <RandomSprintModal isOpen={isSprintModalOpen} onClose={() => setIsSprintModalOpen(false)} />
     </div>
   )
 }

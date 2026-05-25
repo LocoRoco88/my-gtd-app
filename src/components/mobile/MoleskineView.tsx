@@ -1,11 +1,14 @@
 'use client'
 
+import { useState } from 'react'
 import { useStore, Task } from '@/lib/store'
-import { Play, Calendar as CalendarIcon } from 'lucide-react'
+import { Play, Calendar as CalendarIcon, Dices } from 'lucide-react'
 import { TimeBadge } from '@/components/ui/TimeBadge'
+import { RandomSprintModal } from '@/components/ui/RandomSprintModal'
 
 export function MoleskineView() {
   const { tasks, startFocus } = useStore()
+  const [isSprintModalOpen, setIsSprintModalOpen] = useState(false)
   
   // Get today's actionable tasks (excluding inbox, someday, done)
   const todayTasks = tasks.filter(t => t.status === 'next_action' && t.type !== 'routine')
@@ -49,9 +52,17 @@ export function MoleskineView() {
 
   return (
     <div className="flex flex-col gap-3 max-w-sm mx-auto font-serif">
-      <div className="mb-3">
-        <h2 className="text-2xl font-bold tracking-tight text-foreground/90">Today</h2>
-        <div className="h-0.5 w-12 bg-brand-500 mt-2"></div>
+      <div className="mb-3 flex justify-between items-end">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground/90">Today</h2>
+          <div className="h-0.5 w-12 bg-brand-500 mt-2"></div>
+        </div>
+        <button
+          onClick={() => setIsSprintModalOpen(true)}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-tr from-brand-600 to-indigo-650 text-white rounded-xl text-xs font-sans font-bold shadow active:scale-[0.98] cursor-pointer"
+        >
+          <Dices size={14} /> Random Sprint
+        </button>
       </div>
 
       {mixedItems.map((item, idx) => {
@@ -97,6 +108,8 @@ export function MoleskineView() {
         <div className="inline-block w-2 h-2 rounded-full bg-surface-border mx-1"></div>
         <div className="inline-block w-2 h-2 rounded-full bg-surface-border mx-1"></div>
       </div>
+
+      <RandomSprintModal isOpen={isSprintModalOpen} onClose={() => setIsSprintModalOpen(false)} />
     </div>
   )
 }

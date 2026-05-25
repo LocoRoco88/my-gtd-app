@@ -97,8 +97,12 @@ interface AppState {
   addTask: (task: Task) => void
   updateTask: (id: string, updates: Partial<Task>) => void
   deleteTask: (id: string) => void
+  updateTimeLog: (id: string, updates: Partial<TimeLog>) => Promise<void>
+  deleteTimeLog: (id: string) => Promise<void>
 
   // Focus Tracker State Machine
+  isGhostTimer: boolean
+  setGhostTimer: (val: boolean) => void
   focusState: FocusState
   activeTaskId: string | null
   activeChecklistItemId: string | null
@@ -176,7 +180,29 @@ export const useStore = create<AppState>((set, get) => ({
     }))
     try { await api.deleteTask(id) } catch (err) { console.error('Failed to sync delete:', err) }
   },
+  updateTimeLog: async (id, updates) => {
+    set((state) => ({
+      timeLogs: state.timeLogs.map(l => l.id === id ? { ...l, ...updates } : l)
+    }))
+    try {
+      await api.updateTimeLog(id, updates)
+    } catch (err) {
+      console.error('Failed to sync time log update:', err)
+    }
+  },
+  deleteTimeLog: async (id) => {
+    set((state) => ({
+      timeLogs: state.timeLogs.filter(l => l.id !== id)
+    }))
+    try {
+      await api.deleteTimeLog(id)
+    } catch (err) {
+      console.error('Failed to sync time log delete:', err)
+    }
+  },
 
+  isGhostTimer: false,
+  setGhostTimer: (val) => set({ isGhostTimer: val }),
   focusState: 'IDLE',
   activeTaskId: null,
   activeChecklistItemId: null,
@@ -219,43 +245,55 @@ export const useStore = create<AppState>((set, get) => ({
     set({ focusState: 'ACTIVE_WORKING', interruptedTimeElapsedSeconds: 0 })
   },
   stopFocus: async () => {
-    const { activeTaskId, activeChecklistItemId, activeStartTime, activeTimeElapsedSeconds } = get()
-    if (activeTaskId && activeTimeElapsedSeconds > 0 && activeStartTime) {
-      const now = new Date()
-      const endStr = now.toISOString()
-      const log: TimeLog = { 
-        id: crypto.randomUUID(), 
-        task_id: activeTaskId, 
-        checklist_item_id: activeChecklistItemId || undefined,
-        duration_seconds: activeTimeElapsedSeconds, 
-        start_time: activeStartTime,
-        end_time: endStr,
-        date: endStr.split('T')[0],
-        log_type: 'active', 
-        created_at: endStr 
+    const { activeTaskId, activeChecklistItemId, activeStartTime, activeTimeElapsedSeconds, isGhostTimer, tasks, updateTask } = get()
+    if (activeTaskId) {
+      const task = tasks.find(t => t.id === activeTaskId)
+      if (isGhostTimer && task && (!task.title || task.title.trim() === '')) {
+        await updateTask(activeTaskId, { title: 'Untitled Quick Log' })
       }
-      set(state => ({ timeLogs: [...state.timeLogs, log] }))
-      try {
-        await api.logTime(log)
-      } catch (err) {
-        console.error('Failed to log time:', err)
+
+      if (activeTimeElapsedSeconds > 0 && activeStartTime) {
+        const now = new Date()
+        const endStr = now.toISOString()
+        const log: TimeLog = { 
+          id: crypto.randomUUID(), 
+          task_id: activeTaskId, 
+          checklist_item_id: activeChecklistItemId || undefined,
+          duration_seconds: activeTimeElapsedSeconds, 
+          start_time: activeStartTime,
+          end_time: endStr,
+          date: endStr.split('T')[0],
+          log_type: 'active', 
+          created_at: endStr 
+        }
+        set(state => ({ timeLogs: [...state.timeLogs, log] }))
+        try {
+          await api.logTime(log)
+        } catch (err) {
+          console.error('Failed to log time:', err)
+        }
       }
     }
-    set({ focusState: 'IDLE', activeTaskId: null, activeChecklistItemId: null, activeStartTime: null, activeTimeElapsedSeconds: 0, interruptedTimeElapsedSeconds: 0 })
+    set({ focusState: 'IDLE', activeTaskId: null, activeChecklistItemId: null, activeStartTime: null, activeTimeElapsedSeconds: 0, interruptedTimeElapsedSeconds: 0, isGhostTimer: false })
   },
   completeFocus: async () => {
-    const { activeTaskId, activeChecklistItemId, activeStartTime, activeTimeElapsedSeconds } = get()
+    const { activeTaskId, activeChecklistItemId, activeStartTime, activeTimeElapsedSeconds, isGhostTimer, tasks, updateTask } = get()
     if (activeTaskId) {
+      const task = tasks.find(t => t.id === activeTaskId)
+      if (isGhostTimer && task && (!task.title || task.title.trim() === '')) {
+        await updateTask(activeTaskId, { title: 'Untitled Quick Log' })
+      }
+
       if (activeChecklistItemId) {
         // Just mark the checklist item as done
-        const task = get().tasks.find(t => t.id === activeTaskId)
-        if (task && task.checklist) {
-          const updatedChecklist = task.checklist.map(c => c.id === activeChecklistItemId ? { ...c, is_completed: true } : c)
-          get().updateTask(activeTaskId, { checklist: updatedChecklist })
+        const updatedTaskObj = get().tasks.find(t => t.id === activeTaskId)
+        if (updatedTaskObj && updatedTaskObj.checklist) {
+          const updatedChecklist = updatedTaskObj.checklist.map(c => c.id === activeChecklistItemId ? { ...c, is_completed: true } : c)
+          await get().updateTask(activeTaskId, { checklist: updatedChecklist })
         }
       } else {
         // Mark whole task as done
-        get().updateTask(activeTaskId, { status: 'done' })
+        await get().updateTask(activeTaskId, { status: 'done' })
       }
       
       if (activeTimeElapsedSeconds > 0 && activeStartTime) {
@@ -280,7 +318,7 @@ export const useStore = create<AppState>((set, get) => ({
         }
       }
     }
-    set({ focusState: 'IDLE', activeTaskId: null, activeChecklistItemId: null, activeStartTime: null, activeTimeElapsedSeconds: 0, interruptedTimeElapsedSeconds: 0 })
+    set({ focusState: 'IDLE', activeTaskId: null, activeChecklistItemId: null, activeStartTime: null, activeTimeElapsedSeconds: 0, interruptedTimeElapsedSeconds: 0, isGhostTimer: false })
   },
   tickTimer: () => set((state) => {
     if (state.focusState === 'ACTIVE_WORKING') {

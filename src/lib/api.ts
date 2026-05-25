@@ -128,11 +128,12 @@ export const api = {
     return data
   },
 
-  async logTime(log: Omit<TimeLog, 'id'>) {
+  async logTime(log: TimeLog) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
 
     const { data, error } = await supabase.from('time_logs').insert([{
+      id: log.id,
       user_id: user.id,
       task_id: log.task_id,
       checklist_item_id: log.checklist_item_id,
@@ -146,6 +147,25 @@ export const api = {
     
     if (error) throw error
     return data
+  },
+
+  async updateTimeLog(id: string, updates: Partial<TimeLog>) {
+    const { data, error } = await supabase.from('time_logs').update({
+      task_id: updates.task_id,
+      checklist_item_id: updates.checklist_item_id,
+      duration_seconds: updates.duration_seconds,
+      start_time: updates.start_time,
+      end_time: updates.end_time,
+      date: updates.date,
+      log_type: updates.log_type,
+    }).eq('id', id).select().single()
+    if (error) throw error
+    return data
+  },
+
+  async deleteTimeLog(id: string) {
+    const { error } = await supabase.from('time_logs').delete().eq('id', id)
+    if (error) throw error
   },
 
   // Daily Reflections

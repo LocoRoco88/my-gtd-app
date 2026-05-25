@@ -1,8 +1,9 @@
 'use client'
 
-import { useStore, TimeLog } from '@/lib/store'
+import { useState } from 'react'
+import { useStore, TimeLog, Task } from '@/lib/store'
 import { startOfWeek, addDays, format, startOfToday } from 'date-fns'
-import { Clock, Repeat, Calendar, CheckCircle2 } from 'lucide-react'
+import { Clock, Repeat, Calendar, CheckCircle2, X } from 'lucide-react'
 
 const PIXELS_PER_MINUTE = 1.2
 const START_HOUR = 8
@@ -10,6 +11,15 @@ const END_HOUR = 20
 const MINUTE_INTERVAL = 10
 const SLOTS_PER_HOUR = 60 / MINUTE_INTERVAL
 const HOURS = Array.from({ length: END_HOUR - START_HOUR + 1 }).map((_, i) => i + START_HOUR)
+
+// Helper to format Date ISO to native time input HH:mm
+const formatToLocalTime = (isoString?: string) => {
+  if (!isoString) return ''
+  const date = new Date(isoString)
+  const h = date.getHours().toString().padStart(2, '0')
+  const m = date.getMinutes().toString().padStart(2, '0')
+  return `${h}:${m}`
+}
 
 // 10-Minute Slot (visual grid)
 function TimeSlot({ hour, minutes, isHourMark }: { hour: number; minutes: number; isHourMark: boolean }) {
@@ -26,7 +36,7 @@ function TimeSlot({ hour, minutes, isHourMark }: { hour: number; minutes: number
   )
 }
 
-function TimeLogBlock({ log }: { log: TimeLog }) {
+function TimeLogBlock({ log, onClick }: { log: TimeLog; onClick: () => void }) {
   const { tasks } = useStore()
   const task = tasks.find(t => t.id === log.task_id)
   
@@ -49,7 +59,8 @@ function TimeLogBlock({ log }: { log: TimeLog }) {
 
   return (
     <div
-      className={`absolute left-8 right-2 rounded-lg border border-brand-400 bg-brand-100/90 dark:bg-brand-900/80 dark:border-brand-600 shadow-sm p-1.5 overflow-hidden text-xs z-10 hover:z-20 hover:shadow-md transition-all`}
+      onClick={onClick}
+      className={`absolute left-8 right-2 rounded-lg border border-brand-400 bg-brand-100/90 dark:bg-brand-900/80 dark:border-brand-600 shadow-sm p-1.5 overflow-hidden text-xs z-10 hover:z-20 hover:shadow-md transition-all cursor-pointer hover:border-brand-500`}
       style={{
         top: `${topOffset}px`,
         height: `${durationMinutes * PIXELS_PER_MINUTE}px`
@@ -67,7 +78,7 @@ function TimeLogBlock({ log }: { log: TimeLog }) {
   )
 }
 
-function DayColumn({ date, logs }: { date: Date; logs: TimeLog[] }) {
+function DayColumn({ date, logs, onLogClick }: { date: Date; logs: TimeLog[]; onLogClick: (log: TimeLog) => void }) {
   const { workSchedule, tasks: allStoreTasks } = useStore()
   const dateStr = format(date, 'yyyy-MM-dd')
   const isToday = dateStr === format(startOfToday(), 'yyyy-MM-dd')
@@ -233,7 +244,7 @@ function DayColumn({ date, logs }: { date: Date; logs: TimeLog[] }) {
           })}
 
           {logs.map(log => (
-            <TimeLogBlock key={log.id} log={log} />
+            <TimeLogBlock key={log.id} log={log} onClick={() => onLogClick(log)} />
           ))}
         </div>
       </div>
@@ -242,14 +253,95 @@ function DayColumn({ date, logs }: { date: Date; logs: TimeLog[] }) {
 }
 
 export function WeeklyPlanningWizard() {
-  const { timeLogs } = useStore()
+  const { timeLogs, updateTimeLog, deleteTimeLog, tasks, updateTask } = useStore()
+  
+  // Modal Editing States
+  const [editingLog, setEditingLog] = useState<TimeLog | null>(null)
+  const [taskTitle, setTaskTitle] = useState('')
+  const [startTime, setStartTime] = useState('')
+  const [endTime, setEndTime] = useState('')
+  const [errorMsg, setErrorMsg] = useState('')
 
   const today = startOfToday()
   const startOfCurrentWeek = startOfWeek(today, { weekStartsOn: 1 }) // Monday start
   const days = Array.from({ length: 7 }).map((_, i) => addDays(startOfCurrentWeek, i))
 
+  const handleLogClick = (log: TimeLog) => {
+    const task = tasks.find(t => t.id === log.task_id)
+    setEditingLog(log)
+    setTaskTitle(task?.title || 'Unknown Task')
+    setStartTime(formatToLocalTime(log.start_time))
+    setEndTime(formatToLocalTime(log.end_time))
+    setErrorMsg('')
+  }
+
+  const handleSave = async () => {
+    if (!editingLog) return
+    
+    // Parse times
+    const [sh, sm] = startTime.split(':').map(Number)
+    const [eh, em] = endTime.split(':').map(Number)
+    
+    if (isNaN(sh) || isNaN(sm) || isNaN(eh) || isNaN(em)) {
+      setErrorMsg('Tast venligst gyldige tider.')
+      return
+    }
+
+    const startDate = new Date(editingLog.start_time)
+    startDate.setHours(sh)
+    startDate.setMinutes(sm)
+    startDate.setSeconds(0)
+    startDate.setMilliseconds(0)
+
+    const endDate = new Date(editingLog.end_time || editingLog.start_time)
+    endDate.setHours(eh)
+    endDate.setMinutes(em)
+    endDate.setSeconds(0)
+    endDate.setMilliseconds(0)
+
+    if (endDate.getTime() < startDate.getTime()) {
+      setErrorMsg('Sluttid kan ikke være før starttid.')
+      return
+    }
+
+    const durationSeconds = Math.round((endDate.getTime() - startDate.getTime()) / 1000)
+
+    try {
+      // 1. Update task title associated with this time log
+      if (editingLog.task_id) {
+        await updateTask(editingLog.task_id, { title: taskTitle })
+      }
+
+      // 2. Update time log details
+      await updateTimeLog(editingLog.id, {
+        start_time: startDate.toISOString(),
+        end_time: endDate.toISOString(),
+        duration_seconds: durationSeconds,
+        date: startDate.toISOString().split('T')[0]
+      })
+
+      setEditingLog(null)
+    } catch (err) {
+      console.error(err)
+      setErrorMsg('Fejl under gem.')
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!editingLog) return
+    if (confirm('Er du sikker på, at du vil slette denne tidslog?')) {
+      try {
+        await deleteTimeLog(editingLog.id)
+        setEditingLog(null)
+      } catch (err) {
+        console.error(err)
+        setErrorMsg('Kunne ikke slette tidslog.')
+      }
+    }
+  }
+
   return (
-    <div className="h-full flex flex-col max-w-7xl mx-auto w-full">
+    <div className="h-full flex flex-col max-w-7xl mx-auto w-full relative">
       <div className="mb-6">
         <h2 className="text-3xl font-bold tracking-tight text-foreground">Historical Logbook</h2>
         <p className="text-muted mt-1">An automated daily diary of where your time went, based on Focus Tracker data.</p>
@@ -260,9 +352,90 @@ export function WeeklyPlanningWizard() {
           const dayStr = format(day, 'yyyy-MM-dd')
           // Filter logs for this specific date
           const dayLogs = timeLogs.filter(l => l.date === dayStr || l.start_time?.startsWith(dayStr))
-          return <DayColumn key={dayStr} date={day} logs={dayLogs} />
+          return <DayColumn key={dayStr} date={day} logs={dayLogs} onLogClick={handleLogClick} />
         })}
       </div>
+
+      {/* Edit Log Modal */}
+      {editingLog && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-surface border border-surface-border rounded-2xl shadow-2xl p-6 max-w-md w-full animate-in zoom-in-95 duration-200 text-foreground">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold">Ret Tidsregistrering</h3>
+              <button 
+                onClick={() => setEditingLog(null)}
+                className="text-muted hover:text-foreground transition-colors p-1 rounded-lg hover:bg-surface-hover-light dark:hover:bg-surface-hover-dark"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {errorMsg && (
+              <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-500 rounded-xl text-xs font-semibold">
+                {errorMsg}
+              </div>
+            )}
+
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-bold text-muted uppercase tracking-wider">Opgavetitel</label>
+                <input
+                  type="text"
+                  value={taskTitle}
+                  onChange={(e) => setTaskTitle(e.target.value)}
+                  className="bg-background border border-surface-border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 text-foreground font-sans"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-muted uppercase tracking-wider">Starttid</label>
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => setStartTime(e.target.value)}
+                    className="bg-background border border-surface-border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 text-foreground font-sans"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-muted uppercase tracking-wider">Sluttid</label>
+                  <input
+                    type="time"
+                    value={endTime}
+                    onChange={(e) => setEndTime(e.target.value)}
+                    className="bg-background border border-surface-border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-brand-500 text-foreground font-sans"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-between items-center gap-3 mt-6">
+                <button
+                  onClick={handleDelete}
+                  className="px-4 py-2.5 text-red-500 hover:bg-red-500/10 rounded-xl font-bold text-sm transition-colors border border-transparent hover:border-red-500/20"
+                >
+                  Slet log
+                </button>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={() => setEditingLog(null)}
+                    className="px-4 py-2.5 bg-surface-hover-light dark:bg-surface-hover-dark border border-surface-border text-foreground hover:bg-surface-border rounded-xl font-bold text-sm transition-colors"
+                  >
+                    Annuller
+                  </button>
+                  <button
+                    onClick={handleSave}
+                    className="px-5 py-2.5 bg-brand-500 hover:bg-brand-600 text-white rounded-xl font-bold text-sm transition-all shadow-md shadow-brand-500/20"
+                  >
+                    Gem ændringer
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
