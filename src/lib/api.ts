@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { Task, Project } from './store'
+import { Task, Project, TimeLog } from './store'
 
 function sanitizeTask(task: Partial<Task>) {
   const allowedKeys: (keyof Task)[] = [
@@ -128,15 +128,20 @@ export const api = {
     return data
   },
 
-  async logTime(taskId: string, durationSeconds: number, logType: 'active' | 'interrupted') {
+  async logTime(log: Omit<TimeLog, 'id'>) {
     const { data: { user } } = await supabase.auth.getUser()
     if (!user) throw new Error('Not authenticated')
 
     const { data, error } = await supabase.from('time_logs').insert([{
       user_id: user.id,
-      task_id: taskId,
-      duration_seconds: durationSeconds,
-      log_type: logType
+      task_id: log.task_id,
+      checklist_item_id: log.checklist_item_id,
+      duration_seconds: log.duration_seconds,
+      start_time: log.start_time,
+      end_time: log.end_time,
+      date: log.date,
+      log_type: log.log_type,
+      created_at: log.created_at
     }]).select().single()
     
     if (error) throw error

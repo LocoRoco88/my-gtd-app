@@ -59,7 +59,11 @@ CREATE TABLE public.time_logs (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
     task_id UUID NOT NULL REFERENCES public.tasks(id) ON DELETE CASCADE,
+    checklist_item_id UUID,
     duration_seconds INTEGER NOT NULL,
+    start_time TIMESTAMPTZ,
+    end_time TIMESTAMPTZ,
+    date DATE,
     log_type TEXT NOT NULL CHECK (log_type IN ('active', 'interrupted')),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

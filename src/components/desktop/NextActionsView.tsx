@@ -2,11 +2,11 @@
 
 import { useState } from 'react'
 import { useStore, Task, ChecklistItem } from '@/lib/store'
-import { Check, Trash2, Tag, FolderKanban, ListChecks, Plus, X } from 'lucide-react'
+import { Check, Trash2, Tag, FolderKanban, ListChecks, Plus, X, Play } from 'lucide-react'
 import { TimeBadge } from '@/components/ui/TimeBadge'
 
 export function NextActionsView() {
-  const { tasks, projects, updateTask, deleteTask } = useStore()
+  const { tasks, projects, updateTask, deleteTask, startFocus } = useStore()
   const [groupBy, setGroupBy] = useState<'project' | 'context'>('project')
 
   // Filter for next actions (exclude events and routines)
@@ -157,6 +157,9 @@ export function NextActionsView() {
           </div>
 
           <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2 pl-4 shrink-0">
+            <button onClick={(e) => { e.stopPropagation(); startFocus(task.id); }} className="p-2 rounded-lg text-brand-500 hover:text-white hover:bg-brand-500 transition-colors shadow-sm border border-transparent hover:border-brand-600">
+              <Play size={16} className="fill-current" />
+            </button>
             <button onClick={(e) => { e.stopPropagation(); deleteTask(task.id); }} className="p-2 rounded-lg text-muted hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
               <Trash2 size={16} />
             </button>
@@ -217,6 +220,12 @@ export function NextActionsView() {
                   <span className={`text-sm flex-1 ${item.is_completed ? 'line-through text-muted' : 'text-foreground'}`}>
                     {item.text}
                   </span>
+                  <button 
+                    onClick={() => startFocus(task.id, item.id)}
+                    className="opacity-0 group-hover/item:opacity-100 p-1 text-brand-500 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/30 rounded transition-all"
+                  >
+                    <Play size={14} className="fill-current" />
+                  </button>
                   <button 
                     onClick={() => deleteChecklistItem(item.id)}
                     className="opacity-0 group-hover/item:opacity-100 p-1 text-muted hover:text-red-500 transition-opacity"

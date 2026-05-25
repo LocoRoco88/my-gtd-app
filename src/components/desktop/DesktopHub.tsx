@@ -10,6 +10,7 @@ import { SettingsView } from './SettingsView'
 import { RoutineDashboard } from './RoutineDashboard'
 import { NextActionsView } from './NextActionsView'
 import { DesktopCaptureBar } from './DesktopCaptureBar'
+import { FocusTrackerBar } from './FocusTrackerBar'
 
 export function DesktopHub() {
   const { desktopTab, setDesktopTab } = useStore()
@@ -56,8 +57,9 @@ export function DesktopHub() {
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col relative overflow-hidden bg-background">
-        <div className="absolute inset-0 overflow-y-auto p-8 pb-28">
+      <main className="flex-1 flex flex-col overflow-hidden bg-background">
+        <FocusTrackerBar />
+        <div className="flex-1 overflow-y-auto p-8 pb-28 relative">
           {desktopTab === 'clarify' && <ClarifyWizard />}
           {desktopTab === 'next_actions' && <NextActionsView />}
           {desktopTab === 'plan' && <WeeklyPlanningWizard />}
