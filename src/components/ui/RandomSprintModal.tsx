@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useStore, Task } from '@/lib/store'
+import { useStore, Task, ChecklistItem } from '@/lib/store'
 import { X, Dices, Zap, Check, RefreshCw, Coffee } from 'lucide-react'
 
 interface RandomSprintModalProps {
@@ -9,10 +9,19 @@ interface RandomSprintModalProps {
   onClose: () => void
 }
 
+type Challenge = {
+  type: 'task' | 'subtask'
+  id: string
+  title: string
+  task: Task
+  subtask?: ChecklistItem
+  parentTitle?: string
+}
+
 export function RandomSprintModal({ isOpen, onClose }: RandomSprintModalProps) {
   const { tasks, startFocus } = useStore()
   const [duration, setDuration] = useState<number | null>(null)
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null)
+  const [selectedChallenge, setSelectedChallenge] = useState<Challenge | null>(null)
   const [hasNoMatches, setHasNoMatches] = useState(false)
   const [isRolling, setIsRolling] = useState(false)
 
@@ -23,47 +32,62 @@ export function RandomSprintModal({ isOpen, onClose }: RandomSprintModalProps) {
     rollTask(mins)
   }
 
-  const rollTask = (mins: number, currentTaskId?: string) => {
+  const rollTask = (mins: number, currentChallengeId?: string) => {
     setIsRolling(true)
     setTimeout(() => {
-      // Filter next actions with matching time estimate where status = 'next_action' and type = 'standard' and not a routine
-      const matching = tasks.filter(
-        t => t.status === 'next_action' && t.time_estimate_minutes === mins && t.type === 'standard' && !t.is_routine
-      )
+      const validTasks = tasks.filter(t => t.status === 'next_action' && t.type === 'standard' && !t.is_routine)
+      const pool: Challenge[] = []
 
-      if (matching.length === 0) {
-        setSelectedTask(null)
+      validTasks.forEach(t => {
+        if (t.time_estimate_minutes === mins) {
+          pool.push({ type: 'task', id: t.id, title: t.title, task: t })
+        }
+        if (t.checklist) {
+          t.checklist.filter((c: ChecklistItem) => !c.is_completed && c.time_estimate_minutes === mins).forEach((c: ChecklistItem) => {
+            pool.push({ type: 'subtask', id: c.id, title: c.text, task: t, subtask: c, parentTitle: t.title })
+          })
+        }
+      })
+
+      if (pool.length === 0) {
+        setSelectedChallenge(null)
         setHasNoMatches(true)
       } else {
         setHasNoMatches(false)
-        const others = currentTaskId ? matching.filter(t => t.id !== currentTaskId) : matching
-        const pool = others.length > 0 ? others : matching
-        const randomIndex = Math.floor(Math.random() * pool.length)
-        setSelectedTask(pool[randomIndex])
+        const others = currentChallengeId ? pool.filter(c => c.id !== currentChallengeId) : pool
+        const finalPool = others.length > 0 ? others : pool
+        const randomIndex = Math.floor(Math.random() * finalPool.length)
+        setSelectedChallenge(finalPool[randomIndex])
       }
       setIsRolling(false)
     }, 600) // micro-animation delay for roulette feel
   }
 
   const handleChallengeAccepted = () => {
-    if (selectedTask) {
-      startFocus(selectedTask.id)
+    if (selectedChallenge) {
+      startFocus(selectedChallenge.task.id, selectedChallenge.subtask?.id)
       handleClose()
     }
   }
 
   const handleClose = () => {
     setDuration(null)
-    setSelectedTask(null)
+    setSelectedChallenge(null)
     setHasNoMatches(false)
     setIsRolling(false)
     onClose()
   }
 
   const getMatchingCount = (mins: number) => {
-    return tasks.filter(
-      t => t.status === 'next_action' && t.time_estimate_minutes === mins && t.type === 'standard' && !t.is_routine
-    ).length
+    const validTasks = tasks.filter(t => t.status === 'next_action' && t.type === 'standard' && !t.is_routine)
+    let count = 0
+    validTasks.forEach(t => {
+      if (t.time_estimate_minutes === mins) count++
+      if (t.checklist) {
+        count += t.checklist.filter((c: ChecklistItem) => !c.is_completed && c.time_estimate_minutes === mins).length
+      }
+    })
+    return count
   }
 
   return (
@@ -142,16 +166,23 @@ export function RandomSprintModal({ isOpen, onClose }: RandomSprintModalProps) {
           </div>
         ) : (
           /* Screen 2: Challenge accepted / Roll again */
-          selectedTask && (
+          selectedChallenge && (
             <div className="flex flex-col items-center text-center animate-in zoom-in-95 duration-300">
               <span className="text-[10px] uppercase font-black tracking-widest text-brand-500 bg-brand-500/10 px-3 py-1 rounded-full border border-brand-500/20 mb-6">
                 Active Challenge
               </span>
               
               <h3 className="text-zinc-400 text-sm font-semibold mb-2">Your Next Sprint Challenge:</h3>
-              <h2 className="text-2xl sm:text-3xl font-black tracking-tight mb-8 leading-tight max-w-xs text-white">
-                &ldquo;{selectedTask.title}&rdquo;
+              <h2 className="text-2xl sm:text-3xl font-black tracking-tight mb-4 leading-tight max-w-xs text-white">
+                &ldquo;{selectedChallenge.title}&rdquo;
               </h2>
+              
+              {selectedChallenge.type === 'subtask' && (
+                <p className="text-xs text-zinc-400 mb-6 bg-surface-hover-light dark:bg-surface-hover-dark px-3 py-1.5 rounded-lg border border-surface-border">
+                  Part of: <span className="font-semibold text-zinc-300">{selectedChallenge.parentTitle}</span>
+                </p>
+              )}
+              {selectedChallenge.type !== 'subtask' && <div className="mb-6"></div>}
 
               <div className="flex flex-col gap-3 w-full">
                 <button
@@ -162,7 +193,7 @@ export function RandomSprintModal({ isOpen, onClose }: RandomSprintModalProps) {
                 </button>
 
                 <button
-                  onClick={() => rollTask(duration, selectedTask.id)}
+                  onClick={() => rollTask(duration, selectedChallenge.id)}
                   className="w-full flex items-center justify-center gap-2 py-3 bg-zinc-900 border border-zinc-800 hover:bg-zinc-850 hover:border-zinc-700 text-zinc-300 font-bold rounded-2xl transition-all text-sm active:scale-[0.98] cursor-pointer"
                 >
                   <RefreshCw size={14} /> Roll Again

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useStore, Task, ChecklistItem } from '@/lib/store'
-import { Check, Trash2, Tag, FolderKanban, ListChecks, Plus, X, Play, Dices } from 'lucide-react'
+import { Check, Trash2, Tag, FolderKanban, ListChecks, Plus, X, Play, Dices, CornerDownRight, Clock } from 'lucide-react'
 import { TimeBadge } from '@/components/ui/TimeBadge'
 import { RandomSprintModal } from '@/components/ui/RandomSprintModal'
 
@@ -168,6 +168,30 @@ export function NextActionsView() {
           </div>
         </div>
 
+        {/* Uncompleted Sub-tasks list (Actionable) */}
+        {!isExpanded && checklist.filter((c: ChecklistItem) => !c.is_completed).length > 0 && (
+          <div className="mt-3 flex flex-col gap-1.5 pl-[28px]">
+            {checklist.filter((c: ChecklistItem) => !c.is_completed).map((item: ChecklistItem) => (
+              <div key={item.id} className="flex items-center gap-3 pl-3 border-l-[1.5px] border-surface-border/60 group/subtask transition-colors hover:border-brand-500/30">
+                <CornerDownRight size={14} className="text-muted/40 shrink-0" />
+                <span className="text-sm font-medium text-muted-foreground flex-1 group-hover/subtask:text-foreground transition-colors">{item.text}</span>
+                {item.time_estimate_minutes && (
+                  <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-surface-border/50 text-muted shrink-0 flex items-center gap-1">
+                    <Clock size={10} /> {item.time_estimate_minutes}m
+                  </span>
+                )}
+                <button 
+                  onClick={(e) => { e.stopPropagation(); startFocus(task.id, item.id); }} 
+                  className="opacity-0 group-hover/subtask:opacity-100 p-1.5 rounded-md text-brand-500 hover:text-white hover:bg-brand-500 transition-all shadow-sm"
+                  title="Track sub-task"
+                >
+                  <Play size={12} className="fill-current" />
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Inline Checklist Expansion */}
         {isExpanded && (
           <div className="mt-4 pt-4 border-t border-surface-border animate-in slide-in-from-top-2 duration-200" onClick={(e) => e.stopPropagation()}>
@@ -215,22 +239,39 @@ export function NextActionsView() {
                 <div key={item.id} className="flex items-center gap-3 group/item">
                   <button 
                     onClick={() => toggleChecklistItem(item.id)}
-                    className={`w-4 h-4 rounded border flex items-center justify-center transition-colors ${item.is_completed ? 'bg-brand-500 border-brand-500 text-white' : 'border-surface-border hover:border-brand-500'}`}
+                    className={`w-4 h-4 rounded border flex items-center justify-center transition-colors shrink-0 ${item.is_completed ? 'bg-brand-500 border-brand-500 text-white' : 'border-surface-border hover:border-brand-500'}`}
                   >
                     {item.is_completed && <Check size={10} />}
                   </button>
                   <span className={`text-sm flex-1 ${item.is_completed ? 'line-through text-muted' : 'text-foreground'}`}>
                     {item.text}
                   </span>
+                  
+                  {/* Inline Time Estimate Editor for subtask */}
+                  <div className="flex items-center gap-1 opacity-0 group-hover/item:opacity-100 focus-within:opacity-100 transition-opacity">
+                    <Clock size={12} className="text-muted" />
+                    <input
+                      type="number"
+                      min="1"
+                      placeholder="min"
+                      value={item.time_estimate_minutes || ''}
+                      onChange={(e) => {
+                        const updated = checklist.map((c: ChecklistItem) => c.id === item.id ? { ...c, time_estimate_minutes: Number(e.target.value) || undefined } : c)
+                        updateTask(task.id, { checklist: updated })
+                      }}
+                      className="w-12 bg-transparent border-b border-surface-border/50 outline-none focus:border-brand-500 text-xs text-center text-foreground placeholder:text-muted/50"
+                    />
+                  </div>
+
                   <button 
                     onClick={() => startFocus(task.id, item.id)}
-                    className="opacity-0 group-hover/item:opacity-100 p-1 text-brand-500 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/30 rounded transition-all"
+                    className="opacity-0 group-hover/item:opacity-100 p-1 text-brand-500 hover:text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/30 rounded transition-all shrink-0"
                   >
                     <Play size={14} className="fill-current" />
                   </button>
                   <button 
                     onClick={() => deleteChecklistItem(item.id)}
-                    className="opacity-0 group-hover/item:opacity-100 p-1 text-muted hover:text-red-500 transition-opacity"
+                    className="opacity-0 group-hover/item:opacity-100 p-1 text-muted hover:text-red-500 transition-opacity shrink-0"
                   >
                     <X size={14} />
                   </button>

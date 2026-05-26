@@ -28,6 +28,7 @@ export interface ChecklistItem {
   id: string
   text: string
   is_completed: boolean
+  time_estimate_minutes?: number
 }
 
 export interface Task {
